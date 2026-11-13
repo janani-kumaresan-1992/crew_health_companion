@@ -50,6 +50,8 @@ This project was built with AI assistance (Claude, by Anthropic). AI drafted the
 - - Demo slides (PDF): https://drive.google.com/file/d/1vD2xBSZcS0X4ObkkrlHhW6_n-iEbhmHy/view?usp=sharing
 - Data sources: see `SOURCES.md`
 
+This project is released under the MIT License. See the LICENSE file.
+
 ## Next steps
 
 1. Confirm each provisional threshold against a clinical guideline.
