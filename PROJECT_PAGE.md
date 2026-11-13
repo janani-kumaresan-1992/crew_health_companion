@@ -31,14 +31,10 @@ All readings are simulated. The app does not connect to any sensor, camera, or r
 - The mood screen, vision check, and blood pressure indicator are planned, not built.
 - The app has not been tested with astronauts, flight surgeons, or space medicine staff.
 
-## Demo script (3 minutes)
 
-1. **0:00 to 0:20.** Open on the body map. "Each body system is linked to the spaceflight hazard that threatens it."
-2. **0:20 to 1:00.** Measure heart rate using the guided steps. Show the green result and the trend.
-3. **1:00 to 1:40.** Log three nights of short sleep. Show the amber guidance and the routine escalation log.
-4. **1:40 to 2:20.** Enter a red heart rate reading. Show the immediate-action screen, the escalation message, and the note that no real message was sent.
-5. **2:20 to 2:50.** Show the weekly handoff summary.
-6. **2:50 to 3:00.** "This app supports the crew and the flight surgeon. It does not replace them."
+## Demo
+
+The demo is a seven-slide deck, linked under Links above. It covers the problem, the app, a red-reading screenshot, the NASA data used, next steps, and the team.
 
 ## Team
 
