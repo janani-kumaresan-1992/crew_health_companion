@@ -42,7 +42,7 @@ All readings are simulated. The app does not connect to any sensor, camera, or r
 
 ## Team
 
-[Add team names, roles, and contact.]
+Team KGians: JANANI S, DHAMAYANTHI P, JANANI R, NITHIKA MURUGAN
 
 ## Links
 
