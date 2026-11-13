@@ -40,6 +40,10 @@ The demo is a seven-slide deck, linked under Links above. It covers the problem,
 
 Team KGians: JANANI S, DHAMAYANTHI P, JANANI R, NITHIKA MURUGAN
 
+## How AI was used
+
+This project was built with AI assistance (Claude, by Anthropic). AI drafted the knowledge document, the prototype code, the README, the slide text. A team member then made changes to the code. The team chose the challenge and the approach, tested the prototype, took the screenshots, and reviewed the content. The team is responsible for the final submission. All readings in the app are simulated, and the thresholds are provisional.
+
 ## Links
 
 - Prototype source: https://github.com/janani-kumaresan-1992/crew_health_companion
