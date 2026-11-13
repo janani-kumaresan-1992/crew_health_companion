@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crew Health Companion: prototype (simulated data)</title>
+<style>
+:root{--bg:#0f1720;--card:#18232e;--ink:#eef3f7;--mute:#a9b8c6;--line:#2c3d4c;--green:#007A59;--amber:#F0E442;--red:#B34700;--grey:#6e6e6e;--sim:#5b3fa0}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.45 system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+h1{font-size:18px;margin:0;flex:1 1 200px}
+h2{font-size:20px;margin:4px 0 8px}
+h3{font-size:16px;margin:8px 0}
+.sim{background:var(--sim);color:#fff;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:.3px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;border-bottom:1px solid var(--line)}
+nav button,button.big{min-height:44px;font-size:16px;border-radius:10px;cursor:pointer;font-weight:700}
+nav button{padding:0 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);white-space:nowrap}
+nav button[aria-current="true"]{background:var(--ink);color:var(--bg)}
+button.big{padding:0 18px;border:0;background:var(--ink);color:var(--bg);margin:6px 6px 6px 0}
+button.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+main{max-width:880px;margin:0 auto;padding:16px}
+.view{display:none}
+.view.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.chip{display:inline-flex;gap:6px;align-items:center;font-weight:700;font-size:15px;padding:5px 10px;border-radius:8px}
+.green{background:var(--green);color:#fff}
+.amber{background:var(--amber);color:#111}
+.red{background:var(--red);color:#fff}
+.grey{background:var(--grey);color:#fff}
+.banner{display:none;padding:12px 16px;font-weight:700}
+.banner.on{display:block}
+.banner.red{background:var(--red);color:#fff}
+.banner.amber{background:var(--amber);color:#111}
+.small{font-size:13px;color:var(--mute)}
+.ruleline{font-size:12px;color:var(--mute);margin-top:6px}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;white-space:pre-wrap;background:#0c141b;padding:10px;border-radius:8px}
+input,select{min-height:44px;font-size:16px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:#0c141b;color:var(--ink);width:100%;max-width:220px}
+label{display:block;margin:10px 0 4px;font-weight:600}
+label.cb{font-weight:400;display:flex;gap:8px;align-items:center;min-height:36px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
+svg text{fill:var(--ink);font-size:12px}
+.region{fill:#2d4150;stroke:var(--mute);stroke-width:1.5;cursor:pointer}
+.region:hover,.region:focus{fill:#41607a;outline:2px solid var(--ink)}
+.region.sel{fill:#5a7c94}
+.bar{display:flex;gap:6px;margin-bottom:8px}
+.bar span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.bar span.on{background:var(--ink)}
+</style>
+</head>
+<body>
+<header><h1>Crew Health Companion</h1><span class="sim">SIMULATED DATA · PROTOTYPE</span></header>
+<div id="banner" class="banner" role="alert"></div>
+<nav id="nav" aria-label="Sections"></nav>
+<main>
+<section class="view" id="v-home"></section>
+<section class="view" id="v-body">
+ <div class="card">
+  <p>Tap a body region to see its indicators and the hazard that threatens that system.</p>
+  <svg viewBox="0 0 260 340" width="100%" style="max-width:300px;display:block;margin:0 auto" role="group" aria-label="Body map">
+   <circle class="region" data-r="head" cx="130" cy="34" r="26" tabindex="0" role="button" aria-label="Head"/>
+   <rect class="region" data-r="chest" x="94" y="68" width="72" height="72" rx="18" tabindex="0" role="button" aria-label="Chest"/>
+   <rect class="region" data-r="abd" x="100" y="144" width="60" height="58" rx="14" tabindex="0" role="button" aria-label="Abdomen"/>
+   <rect class="region" data-r="body" x="46" y="70" width="28" height="128" rx="12" tabindex="0" role="button" aria-label="Arms and whole body"/>
+   <rect class="region" data-r="body" x="186" y="70" width="28" height="128" rx="12" tabindex="0" role="button" aria-label="Arms and whole body"/>
+   <path class="region" data-r="legs" d="M100 206 H128 L124 320 H102 Z" tabindex="0" role="button" aria-label="Left leg"/>
+   <path class="region" data-r="legs" d="M132 206 H160 L158 320 H136 Z" tabindex="0" role="button" aria-label="Right leg"/>
+  </svg>
+ </div>
+ <div id="regioninfo"></div>
+</section>
+<section class="view" id="v-measure"></section>
+<section class="view" id="v-trends"></section>
+<section class="view" id="v-action"></section>
+<section class="view" id="v-esc"></section>
+<section class="view" id="v-handoff"></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '—').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const now = () => new Date().toTimeString().slice(0, 5);
+const ST = {green:['●','GREEN'], amber:['▲','AMBER'], red:['■','RED'], grey:['○','GREY']};
+const IND = {
+  hr:    {name:'Heart rate (resting)', unit:'bpm', min:40, max:140, nlo:60, nhi:100},
+  sleep: {name:'Sleep duration', unit:'h', min:0, max:10, nlo:7, nhi:9}
+};
+// Rule numbers map to the section 3 and section 4 rows of the knowledge document.
+const R = {
+  R1:{src:'Section 4, step 1: emergency signs'},
+  R2:{src:'Section 4, step 2: data quality'},
+  R3:{src:'Section 3, heart rate row; NASA HRP cardiovascular adaptations (listed, not opened)'},
+  R4:{src:'Section 3, sleep row; NASA HRP isolation and confinement (sub-page listed, not opened)'},
+  R5:{src:'Section 4, step 5: same indicator amber 3 days in a row'},
+};
+const REG = {
+  head:{n:'Head', f:'Brain, eyes and sleep', h:'Isolation and confinement (sleep and behavior); space radiation (central nervous system)', url:'https://www.nasa.gov/hrp/hazard-isolation-and-confinement/', inds:['sleep'], note:'Vision (SANS) is planned; it is not in this prototype.'},
+  chest:{n:'Chest', f:'Heart and circulation', h:'Gravity fields; cardiovascular adaptations', url:'https://www.nasa.gov/hrp/hazard-gravity-fields/', inds:['hr'], note:'Blood pressure is planned; it is not in this prototype.'},
+  abd:{n:'Abdomen', f:'Digestion and blood sugar', h:'Hostile and closed environments (food and nutrition)', url:'https://www.nasa.gov/hrp/hazard-hostile-closed-environments/', inds:[], note:'Blood glucose is planned for a later build.'},
+  body:{n:'Arms and whole body', f:'Temperature and immune system', h:'Hostile and closed environments (immune changes)', url:'https://www.nasa.gov/hrp/hazard-hostile-closed-environments/', inds:[], note:'Body temperature and immune symptoms are planned for a later build.'},
+  legs:{n:'Legs', f:'Bone and balance', h:'Gravity fields (bone and sensorimotor changes)', url:'https://www.nasa.gov/hrp/hazard-gravity-fields/', inds:[], note:'No indicator is built for this region yet.'}
+};
+const VIEWS = [['home','Home'],['body','Body map'],['measure','Measure'],['trends','Trends'],['esc','Escalation'],['handoff','Handoff']];
+
+// ---------- Triage (section 4). Thresholds are PROVISIONAL, not spaceflight-validated. ----------
+const res = (st, rule, msg, act, rc) => ({st, rule, src:R[rule].src, msg, act, rc});
+function tHR(v, ctx, sym) {
+  if (!(v >= 20 && v <= 250)) return res('grey','R2','Reading missing or outside the device range. Not scored.','Re-measure the heart rate.','Re-measure now');
+  if (v > 120 || (v < 40 && sym)) return res('red','R3',`Resting heart rate ${v} bpm is above 120${v < 40 ? ' or below 40 with symptoms' : ''}.`,'Follow onboard crew medical procedures now. Do not self-treat. The flight surgeon is alerted.','Escalated now');
+  if (v > 100 || v < 60) return res('amber','R3',`${v} bpm is outside 60 to 100.${ctx !== 'rest' ? ` Taken during ${ctx}, so re-measure at rest.` : ''}`,'Rest for 10 minutes, then measure again. Note any symptoms.','Re-measure in 10 min');
+  return res('green','R3',`${v} bpm is within 60 to 100.`,'No action needed. Reading recorded.','Next scheduled check');
+}
+function tSleep(v, prev) {
+  if (!(v >= 0 && v <= 24)) return res('grey','R2','Entry missing or outside the valid range. Not scored.','Re-enter the hours.','Re-enter now');
+  if (v < 5 && prev != null && prev < 5) return res('red','R4','Under 5 hours on two nights in a row.','Tell the flight surgeon now. Do not change any medication without their advice.','Escalated now');
+  if (v < 7) return res('amber','R4',`${v} h is below 7 h.`,'Plan a longer rest period. Check again tomorrow.','Next night');
+  if (v > 9) return res('green','R4',`${v} h is above 9 h. Recorded; long sleep is noted, not scored as a fault.`,'No action needed.','Next night');
+  return res('green','R4',`${v} h is within 7 to 9 h.`,'No action needed. Reading recorded.','Next night');
+}
+const mk = (ind, v, ctx, sym, prev) => {
+  const r = ind === 'hr' ? tHR(v, ctx, sym) : tSleep(v, prev);
+  return {v, ctx, sym, t:now(), ...r};
+};
+
+// ---------- State ----------
+const H = {hr:[], sleep:[]};
+let LOG = [];                       // escalation log
+const UI = {view:'home', ind:'hr', mInd:'hr', mStep:0, mRes:null, timer:60, tid:null, alert:null, hrIn:''};
+const last = ind => H[ind].at(-1) || {st:'grey', v:null, ctx:'—', t:'—', rule:'—', src:'—', msg:'Not measured yet in this prototype.', act:'Measure it on the Measure tab.', rc:'—'};
+const amberRun = arr => { let n = 0; for (let i = arr.length - 1; i >= 0 && arr[i].st === 'amber'; i--) n++; return n; };
+function record(ind, v, ctx, sym) {
+  const arr = H[ind];
+  const e = mk(ind, v, ctx, sym, arr.at(-1)?.v);
+  arr.push(e);
+  if (e.st === 'red') LOG.unshift({k:'Red: immediate escalation', ind, e, prev:arr.slice(-4,-1)});
+  else if (amberRun(arr) === 3) LOG.unshift({k:'Routine: amber 3 days in a row', ind, e, prev:arr.slice(-4,-1)});
+  return e;
+}
+const worst = () => {
+  const L = ['hr','sleep'].map(i => ({i, e:last(i)}));
+  return L.find(x => x.e.st === 'red') || L.find(x => x.e.st === 'amber') || null;
+};
+function overall() {
+  const L = ['hr','sleep'].map(last);
+  if (L.some(e => e.st === 'red')) return 'red';
+  if (L.some(e => e.st === 'amber')) return 'amber';
+  if (L.every(e => e.st === 'grey')) return 'grey';
+  return 'green';
+}
+
+// Seed simulated history (all green), labelled SIMULATED.
+[72,70,74,68,71,73,69].forEach((v, i) => H.hr.push({...mk('hr', v, 'rest', false), sim:true, t:`−${7 - i} d`}));
+{ let p = null;
+  [7.5,8,7.2,7.8,7.4,8.1,7.6].forEach((v, i) => { H.sleep.push({...mk('sleep', v, 'sleep', false, p), sim:true, t:`−${7 - i} d`}); p = v; }); }
+
+// ---------- Shared render helpers ----------
+const chip = (st, t = '') => `<span class="chip ${st}">${ST[st][0]} ${ST[st][1]}${t ? ' · ' + t : ''}</span>`;
+const sim = () => `<span class="sim">SIMULATED</span>`;
+const guide = (e, i) => `<div class="card">
+  <div>${chip(e.st)} <strong>${esc(IND[i].name)}: ${esc(e.v)}${typeof e.v === 'number' ? ' ' + IND[i].unit : ''}</strong></div>
+  <p>${esc(e.msg)}</p>
+  <p><strong>Next step:</strong> ${esc(e.act)}</p>
+  <p class="small">Re-check: ${esc(e.rc)}</p>
+  <div class="ruleline">Rule ${esc(e.rule)} · Source: ${esc(e.src)} · Thresholds PROVISIONAL</div></div>`;
+function escText(l) {
+  if (l.custom) return l.custom;
+  const e = l.e;
+  return `To: flight surgeon\n${IND[l.ind].name}: ${e.v} ${IND[l.ind].unit} at ${e.t}\nContext: ${e.ctx}\nPrevious readings: ${l.prev.map(p => p.v).join(', ') || 'none'}\nStatus: ${ST[e.st][1]} (rule ${e.rule})\nDelivery: alerted (simulated, no real message sent)`;
+}
+function chart(ind) {
+  const I = IND[ind], arr = H[ind].slice(-10), W = 360, Hh = 240, P = 36, n = arr.length;
+  const cl = v => Math.min(I.max, Math.max(I.min, v));
+  const y = v => P + (Hh - 2 * P) * (1 - (cl(v) - I.min) / (I.max - I.min));
+  const x = i => P + (W - 2 * P) * (n < 2 ? 0.5 : i / (n - 1));
+  const mark = (st, cx, cy) => ({
+    green:`<circle cx="${cx}" cy="${cy}" r="6" fill="#007A59"/>`,
+    amber:`<polygon points="${cx},${cy-7} ${cx-7},${cy+6} ${cx+7},${cy+6}" fill="#F0E442" stroke="#111"/>`,
+    red:`<rect x="${cx-6}" y="${cy-6}" width="12" height="12" fill="#B34700"/>`,
+    grey:`<circle cx="${cx}" cy="${cy}" r="5" fill="none" stroke="#9a9a9a" stroke-width="2"/>`
+  })[st];
+  const band = `<rect x="${P}" y="${y(I.nhi)}" width="${W - 2 * P}" height="${y(I.nlo) - y(I.nhi)}" fill="#007A59" fill-opacity=".35"/>`;
+  const axes = `<line x1="${P}" y1="${P}" x2="${P}" y2="${Hh - P}" stroke="#667"/><line x1="${P}" y1="${Hh - P}" x2="${W - P}" y2="${Hh - P}" stroke="#667"/>`;
+  const yl = [I.min, I.nlo, I.nhi, I.max].map(v => `<text x="${P - 4}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+  const xl = arr.map((e, i) => `<text x="${x(i)}" y="${Hh - P + 14}" text-anchor="middle">${esc(e.t)}</text>`).join('');
+  const line = n > 1 ? `<polyline points="${arr.map((e, i) => x(i) + ',' + y(e.v)).join(' ')}" fill="none" stroke="#eef3f7" stroke-width="2"/>` : '';
+  const dots = arr.map((e, i) => mark(e.st, x(i), y(e.v)) + `<text x="${x(i)}" y="${y(e.v) - 10}" text-anchor="middle">${esc(e.v)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="${I.name} trend with normal range shaded">${band}${axes}${yl}${xl}${line}${dots}<text x="${P + 4}" y="${y(I.nhi) - 6}">Normal range (provisional)</text></svg>
+  <p class="small">Shaded band: normal range. Shapes: ● green, ▲ amber, ■ red, ○ no valid reading. Values in ${IND[ind].unit}.</p>`;
+}
+
+// ---------- Views ----------
+function renderBanner() {
+  const b = $('banner'), a = UI.alert, w = worst();
+  const red = a ? {i:a.ind, e:a.e} : (w && w.e.st === 'red' ? w : null);
+  if (red) {
+    const val = typeof red.e.v === 'number' ? ` ${red.e.v} ${IND[red.i].unit}` : ' emergency sign';
+    b.className = 'banner on red';
+    b.innerHTML = `RED: ${esc(IND[red.i].name)}${val}. ${esc(red.e.act)} Flight surgeon alerted (simulated). Rule ${esc(red.e.rule)}.`;
+  } else if (w && w.e.st === 'amber') {
+    b.className = 'banner on amber';
+    b.innerHTML = `AMBER: ${esc(IND[w.i].name)} ${w.e.v} ${IND[w.i].unit}. ${esc(w.e.act)} Rule ${esc(w.e.rule)}.`;
+  } else b.className = 'banner';
+}
+function renderHome() {
+  const o = overall(), w = worst();
+  const rows = ['hr','sleep'].map(i => { const e = last(i); return `<tr><td>${IND[i].name}</td><td>${e.v != null ? e.v + ' ' + IND[i].unit : '—'}</td><td>${chip(e.st)}</td><td>${esc(e.rule)}</td></tr>`; }).join('');
+  $('v-home').innerHTML = `
+   <div class="card">${sim()}<h2>Home</h2>
+    <p>Overall: ${chip(o)}</p>
+    <p class="small">Based on the two measured indicators only. This is not a health check. Thresholds are provisional.</p>
+    <p><strong>Next task:</strong> ${w ? 'Act on the guidance below.' : 'Measure heart rate and log sleep.'}</p>
+    <p class="small">Last escalation: ${LOG[0] ? esc(LOG[0].k) + ' at ' + esc(LOG[0].e.t) : 'none this session'}</p></div>
+   <div class="card"><table><tr><th>Indicator</th><th>Latest</th><th>Status</th><th>Rule</th></tr>${rows}</table></div>
+   ${w ? guide(w.e, w.i) : '<div class="card">All measured values are within range. This does not mean you are healthy overall.</div>'}
+   <div class="card"><button class="big" onclick="setM('hr');go('measure')">Measure heart rate</button><button class="big alt" onclick="setM('sleep');go('measure')">Log sleep</button></div>`;
+}
+function showRegion(k) {
+  document.querySelectorAll('.region').forEach(x => x.classList.toggle('sel', x.dataset.r === k));
+  const r = REG[k];
+  const rows = r.inds.map(i => { const e = last(i); return `<div class="card"><strong>${IND[i].name}</strong> ${chip(e.st)}
+    <p class="small">Latest: ${e.v != null ? e.v + ' ' + IND[i].unit : 'not measured'} · Rule ${esc(e.rule)}</p>
+    <button class="big" onclick="setM('${i}');go('measure')">Measure ${i === 'hr' ? 'heart rate' : 'sleep'}</button></div>`; }).join('');
+  $('regioninfo').innerHTML = `<div class="card"><h2>${r.n}</h2><p><strong>Function:</strong> ${r.f}</p><p><strong>Linked hazard:</strong> ${r.h}</p>
+    <p class="small"><a href="${r.url}">NASA hazard page (listed, not opened)</a></p><p class="small">${r.note}</p></div>${rows}`;
+}
+function renderMeasure() {
+  const el = $('v-measure');
+  if (UI.mRes) {
+    const {i, e} = UI.mRes, L = LOG[0];
+    const routine = L && L.k.startsWith('Routine') && L.ind === i ? `<div class="card"><strong>Routine escalation (simulated)</strong><p class="mono">${esc(escText(L))}</p></div>` : '';
+    const ok = e.st === 'green' ? '<div class="card">Recorded. This is within the provisional range. It does not mean you are healthy overall.</div>' : '';
+    el.innerHTML = `<div class="card">${sim()}<h2>Result</h2></div>` + guide(e, i) + routine + ok +
+      `<div class="card"><h3>Trend</h3>${chart(i)}</div><button class="big" onclick="UI.mRes=null;renderMeasure()">Measure again</button>`;
+    return;
+  }
+  const hr = UI.mInd === 'hr', max = hr ? 3 : 1;
+  const names = hr ? ['Get ready','Find the pulse','Count 60 seconds','Enter and check'] : ['Why it matters','Enter three nights'];
+  const body = hr ? hrStep() : sleepStep();
+  el.innerHTML = `<div class="card">${sim()}
+    <p><button class="big ${hr ? '' : 'alt'}" onclick="setM('hr')">Heart rate</button><button class="big ${hr ? 'alt' : ''}" onclick="setM('sleep')">Sleep</button></p>
+    <div class="bar">${names.map((_, i) => `<span class="${i <= UI.mStep ? 'on' : ''}"></span>`).join('')}</div>
+    <p class="small">Step ${UI.mStep + 1} of ${names.length}: ${names[UI.mStep]}</p>${body}
+    <div>${UI.mStep > 0 ? '<button class="big alt" onclick="mNav(-1)">Back</button>' : ''}${UI.mStep < max ? '<button class="big" onclick="mNav(1)">Next</button>' : ''}</div></div>`;
+}
+function hrStep() {
+  const s = UI.mStep;
+  if (s === 0) return '<p>Sit still for 5 minutes first. Exercise, a meal, or a poor night of sleep changes the reading, so you will tag the context.</p>';
+  if (s === 1) return '<p>Place two fingers on the inside of your wrist, below the thumb. If you cannot find a pulse, use the chest sensor if one is fitted.</p>';
+  if (s === 2) return `<p>Press Start, then count beats for 60 seconds.</p><button class="big" onclick="startT()">Start 60 s</button> <strong id="tm">${UI.timer}</strong> s`;
+  return `<p><strong>First, check for emergency signs.</strong> If any apply, do not continue here. The app will show the immediate-action screen.</p>
+    ${['Chest pain','Fainting','Severe trouble breathing','New confusion','Seizure','Serious bleeding'].map(x => `<label class="cb"><input type="checkbox" class="em"> ${x}</label>`).join('')}
+    <label for="hrIn">Heart rate (bpm)</label><input id="hrIn" type="number" inputmode="numeric" min="20" max="250" value="${UI.hrIn}">
+    <label for="ctx">Context</label><select id="ctx"><option>rest</option><option>exercise</option><option>after meal</option><option>after poor sleep</option></select>
+    <label class="cb"><input type="checkbox" id="sym"> I have a symptom I can feel right now</label>
+    <p class="small">Simulated quick fill for the demo:</p>
+    <button class="big alt" onclick="fill(72)">Green 72</button><button class="big alt" onclick="fill(110)">Amber 110</button><button class="big alt" onclick="fill(128)">Red 128</button>
+    <p><button class="big" onclick="submitHR()">Check reading</button></p>`;
+}
+function sleepStep() {
+  if (UI.mStep === 0) return '<p>Sleep sets the pace for recovery and mood. Under 7 hours is amber. Three amber nights in a row go to the flight surgeon as a routine priority.</p>';
+  return `<p>Enter sleep hours for three nights. Night 3 is the most recent. The values are simulated, set to an amber pattern.</p>
+    ${[1,2,3].map(n => `<label for="s${n}">Night ${n} (hours)</label><input id="s${n}" type="number" step="0.1" min="0" max="24" value="${[5.5,6,6.5][n-1]}">`).join('')}
+    <p><button class="big" onclick="submitSleep()">Check three nights</button></p>`;
+}
+function renderTrend() {
+  $('v-trends').innerHTML = `<div class="card">${sim()}<h2>Trends</h2>
+    <label for="tsel">Indicator</label>
+    <select id="tsel" onchange="UI.ind=this.value;renderTrend()"><option value="hr" ${UI.ind === 'hr' ? 'selected' : ''}>Heart rate</option><option value="sleep" ${UI.ind === 'sleep' ? 'selected' : ''}>Sleep</option></select></div>
+    <div class="card">${chart(UI.ind)}</div>
+    <div class="card"><button class="big alt" onclick="undo()">Undo my last entry</button><p class="small">Only readings you entered are removed. Simulated history stays.</p></div>`;
+}
+function renderEsc() {
+  const items = LOG.length ? LOG.map(l => `<div class="card"><strong>${esc(l.k)}</strong>
+    <p class="small">${esc(l.e.t)} · ${esc(IND[l.ind].name)} · Status: alerted (simulated)</p><p class="mono">${esc(escText(l))}</p></div>`).join('')
+    : '<div class="card">No escalations this session.</div>';
+  $('v-esc').innerHTML = `<div class="card">${sim()}<h2>Escalation</h2><p class="small">Flight surgeon response: none yet (simulated).</p></div>${items}`;
+}
+function renderAction() {
+  const a = UI.alert, el = $('v-action');
+  if (!a) { el.innerHTML = '<div class="card">No immediate action is active.</div>'; return; }
+  const L = LOG.find(l => l.e === a.e);
+  el.innerHTML = `<div class="card">${sim()}<h2>Immediate action</h2>
+    ${chip('red', 'Rule ' + a.e.rule)}
+    <p><strong>${esc(IND[a.ind].name)}</strong>${typeof a.e.v === 'number' ? ': ' + a.e.v + ' ' + IND[a.ind].unit : ''}</p>
+    <p>${esc(a.e.act)}</p>
+    <p class="small">Crew procedure first. This app does not give self-treatment steps.</p></div>
+   <div class="card"><h3>Escalation message</h3><p class="mono">${esc(L ? escText(L) : a.e.msg)}</p>
+    <p class="small">Flight surgeon alerted (simulated). No real message was sent.</p>
+    <div class="ruleline">Rule ${esc(a.e.rule)} · Source: ${esc(a.e.src)}</div></div>
+   <button class="big alt" onclick="UI.alert=null;go('home')">Close and return to home</button>`;
+}
+function renderHandoff() {
+  const rows = [...H.hr.slice(-7).map(e => ({i:'hr', e})), ...H.sleep.slice(-7).map(e => ({i:'sleep', e}))];
+  const tbl = rows.map(({i, e}) => `<tr><td>${IND[i].name}</td><td>${esc(e.t)}</td><td>${esc(e.v)} ${IND[i].unit}</td><td>${chip(e.st)}</td><td>${esc(e.rule)}</td></tr>`).join('');
+  const open = [];
+  ['hr','sleep'].forEach(i => { const e = last(i); if (e.st === 'amber' || e.st === 'red') open.push(`${IND[i].name}: ${ST[e.st][1]} (rule ${e.rule})`); });
+  LOG.filter(l => l.k.startsWith('Routine')).forEach(l => open.push(`${IND[l.ind].name}: routine escalation (simulated)`));
+  $('v-handoff').innerHTML = `<div class="card">${sim()}<h2>Weekly handoff for the flight surgeon</h2>
+    <p class="small">Last 7 readings per indicator. Prepared for review. This is not a diagnosis, and the thresholds are provisional.</p>
+    <table><tr><th>Indicator</th><th>Time</th><th>Value</th><th>Status</th><th>Rule</th></tr>${tbl}</table></div>
+   <div class="card"><h3>Unresolved items</h3>${open.length ? '<ul>' + open.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : '<p>None.</p>'}</div>`;
+}
+function renderNav() {
+  const items = VIEWS.concat(UI.alert ? [['action','Immediate action']] : []);
+  $('nav').innerHTML = items.map(([k, l]) => `<button aria-current="${UI.view === k}" onclick="go('${k}')">${l}</button>`).join('');
+}
+function renderAll() {
+  renderBanner(); renderHome(); renderMeasure(); renderTrend(); renderEsc(); renderAction(); renderHandoff(); renderNav();
+}
+function go(v) {
+  UI.view = v;
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+  renderAll();
+  window.scrollTo(0, 0);
+}
+
+// ---------- Guided measurement flows ----------
+function setM(i) { UI.mInd = i; UI.mStep = 0; UI.mRes = null; renderMeasure(); }
+function mNav(d) { const max = UI.mInd === 'hr' ? 3 : 1; UI.mStep = Math.max(0, Math.min(max, UI.mStep + d)); renderMeasure(); }
+function startT() {
+  clearInterval(UI.tid); UI.timer = 60;
+  UI.tid = setInterval(() => {
+    UI.timer = Math.max(0, UI.timer - 1);
+    const t = $('tm'); if (t) t.textContent = UI.timer;
+    if (UI.timer === 0) clearInterval(UI.tid);
+  }, 1000);
+  renderMeasure();
+}
+function fill(v) { UI.hrIn = v; $('hrIn').value = v; }
+function submitHR() {
+  if ([...document.querySelectorAll('.em')].some(c => c.checked)) {
+    const e = {st:'red', rule:'R1', src:R.R1.src, msg:'An emergency sign was reported on the measurement screen.', act:'Follow onboard crew medical procedures now. Contact the flight surgeon. No self-treatment steps are offered here.', rc:'Escalated now', t:now(), ctx:'—', v:'—'};
+    LOG.unshift({k:'Immediate: emergency sign', ind:'hr', e, prev:[], custom:'Emergency sign reported. Flight surgeon alerted (simulated, no real message sent).'});
+    UI.alert = {ind:'hr', e}; UI.mRes = null; go('action'); return;
+  }
+  UI.hrIn = $('hrIn').value;
+  const e = record('hr', +$('hrIn').value, $('ctx').value, $('sym').checked);
+  UI.mRes = {i:'hr', e};
+  if (e.st === 'red') { UI.alert = {ind:'hr', e}; go('action'); } else renderAll();
+}
+function submitSleep() {
+  [1,2,3].forEach(n => record('sleep', +$('s' + n).value, 'sleep', false));
+  const latest = H.sleep.slice(-3), red = latest.find(x => x.st === 'red');
+  const e = red || latest.at(-1);
+  UI.mRes = {i:'sleep', e};
+  if (red) UI.alert = {ind:'sleep', e: red};
+  renderAll();
+}
+function undo() {
+  const arr = H[UI.ind];
+  let idx = -1;
+  for (let k = arr.length - 1; k >= 0; k--) if (!arr[k].sim) { idx = k; break; }
+  if (idx < 0) return;
+  const [gone] = arr.splice(idx, 1);
+  LOG = LOG.filter(l => l.e !== gone);
+  if (UI.alert && UI.alert.e === gone) UI.alert = null;
+  if (UI.mRes && UI.mRes.e === gone) UI.mRes = null;
+  renderAll();
+}
+
+// ---------- Body map ----------
+document.querySelectorAll('.region').forEach(r => {
+  r.addEventListener('click', () => showRegion(r.dataset.r));
+  r.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showRegion(r.dataset.r); } });
+});
+$('regioninfo').innerHTML = '<p class="small">Select a region.</p>';
+go('home');
+</script>
+</body>
+</html>
