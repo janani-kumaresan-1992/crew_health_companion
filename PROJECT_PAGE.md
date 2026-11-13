@@ -47,7 +47,7 @@ All readings are simulated. The app does not connect to any sensor, camera, or r
 ## Links
 
 - Prototype source: https://github.com/janani-kumaresan-1992/crew_health_companion
-- Demo video: [add video link]
+- - Demo slides (PDF): https://drive.google.com/file/d/1vD2xBSZcS0X4ObkkrlHhW6_n-iEbhmHy/view?usp=sharing
 - Data sources: see `SOURCES.md`
 
 ## Next steps
